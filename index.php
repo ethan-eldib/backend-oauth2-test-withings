@@ -27,8 +27,6 @@ function get_access_token(string $code): string
         'redirect_uri' => $redirect_uri
     ];
 
-    var_dump($url . '?' . urldecode(http_build_query($data)));
-
     $cSession = curl_init();
 
     curl_setopt_array($cSession, [
@@ -47,8 +45,9 @@ function get_access_token(string $code): string
     if (!$result) {
         return false;
     } else {
-        $response = urldecode($result);
-        return $response ?? false;
+        $response = json_decode($result);
+        $accessToken = $response->body->access_token;
+        return $accessToken ?? false;
     }
 }
 
@@ -58,7 +57,7 @@ if (isset($_GET['code'])) {
     if (!$access_token) {
         echo "<p class='alert alert-danger'>Erreur lors de la récupération du token</p>";
     } else {
-        echo "<p class='alert alert-info'>Token récupéré : $access_token</p>";
+        echo "<p class='alert alert-info'>Token récupéré : $access_token </p>";
     }
 }
 ?>

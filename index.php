@@ -9,34 +9,36 @@
  */
 function get_access_token(string $code): string
 {
-    // Récupération des variables d'environnement (fichier .env)
     $env = parse_ini_file('.env');
 
     $client_id = $env['CLIENT_ID'];
     $client_secret = $env['CLIENT_SECRET'];
     $redirect_uri = $env['REDIRECT_URI'];
 
-    $url = 'https://account.withings.com/oauth2/token';
+    $url = 'https://wbsapi.withings.net/v2/oauth2';
 
     // Données à envoyer
     $data = [
-        'grant_type' => 'authorization_code',
+        'action' => 'requesttoken',
         'client_id' => $client_id,
         'client_secret' => $client_secret,
+        'grant_type' => 'authorization_code',
         'code' => $code,
         'redirect_uri' => $redirect_uri
     ];
 
-
-    $httpBuildQuery = http_build_query($data);
+    var_dump($url . '?' . urldecode(http_build_query($data)));
 
     $cSession = curl_init();
-    curl_setopt($cSession, CURLOPT_URL, $url);
-    curl_setopt($cSession, CURLOPT_POST, true);
-    curl_setopt($cSession, CURLOPT_POSTFIELDS, $httpBuildQuery);
-    curl_setopt($cSession, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($cSession, CURLOPT_HEADER, [
-        'Content-Type: application/x-www-form-urlencoded'
+
+    curl_setopt_array($cSession, [
+        CURLOPT_URL => $url,
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => http_build_query($data),
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_SSL_VERIFYHOST => false
+
     ]);
 
     $result = curl_exec($cSession);
@@ -45,8 +47,8 @@ function get_access_token(string $code): string
     if (!$result) {
         return false;
     } else {
-        $response = json_decode($result, true);
-        return $response['access_token'] ?? false;
+        $response = urldecode($result);
+        return $response ?? false;
     }
 }
 
@@ -84,6 +86,8 @@ if (isset($_GET['code'])) {
         <input type="hidden" name="mode" value="demo">
         <input class="btn btn-sm btn-primary" type="submit" value="Autoriser">
     </form>
+
 </main>
 </body>
 </html>
+

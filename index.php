@@ -140,7 +140,7 @@ if (!empty($access_token)) {
     $dateMeasure = "";
     echo '<div class="container m-5">';
     if (!empty($user_data) && isset($user_data['body']['measuregrps'])) {
-        foreach ($user_data['body']['measuregrps'] as $measuregrp) {
+        foreach (array_reverse($user_data['body']['measuregrps']) as $measuregrp) {
             $dateMeasure = date('d/m/Y à H\hi', $measuregrp['date']);
             foreach ($measuregrp['measures'] as $measure) {
                 $measure = $measure['value'] / 1000;

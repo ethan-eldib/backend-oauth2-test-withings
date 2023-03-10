@@ -1,5 +1,15 @@
 <?php
 
+/*if (isset($_GET['code'])) {
+    $code = $_GET['code'];
+    $access_token = get_access_token($code);
+    if (!$access_token) {
+        echo "<p class='alert alert-danger'>Erreur lors de la récupération du token</p>";
+    } else {
+        echo "<p class='alert alert-info'>Token récupéré : $access_token </p>";
+    }
+}*/
+
 /**
  * Récupère un token d'accès à partir d'un code d'autorisation OAuth2.
  *
@@ -46,19 +56,58 @@ function get_access_token(string $code): string
         return false;
     } else {
         $response = json_decode($result);
-        $accessToken = $response->body->access_token;
-        return $accessToken ?? false;
+        return $response->body->access_token ?? false;
     }
 }
 
-if (isset($_GET['code'])) {
-    $code = $_GET['code'];
-    $access_token = get_access_token($code);
-    if (!$access_token) {
-        echo "<p class='alert alert-danger'>Erreur lors de la récupération du token</p>";
-    } else {
-        echo "<p class='alert alert-info'>Token récupéré : $access_token </p>";
+/**
+ * @param string $accessToken
+ * @return false|mixed
+ */
+function get_data_user(string $accessToken)
+{
+    $ch = curl_init();
+
+    curl_setopt($ch, CURLOPT_URL, "https://wbsapi.withings.net/measure");
+
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
+
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'Authorization: Bearer ' . $accessToken
+    ]);
+
+    curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query([
+        'action' => 'getmeas',
+        'meastype' => 1,
+        'meastypes' => 1,
+        'category' => 1,
+        'offset' => 0
+    ]));
+
+    $response = curl_exec($ch);
+    if (curl_error($ch)) {
+        echo 'Erreur curl : ' . curl_error($ch);
+        return false;
     }
+
+    curl_close($ch);
+
+    if (!$response) {
+        return false;
+    } else {
+        return json_decode($response, true);
+    }
+}
+
+$access_token = "";
+if (isset($_GET['code'])) {
+    $access_token = get_access_token($_GET['code']);
+}
+$user_data = [];
+if (!empty($access_token)) {
+    $user_data = get_data_user($access_token);
 }
 ?>
 
@@ -85,6 +134,25 @@ if (isset($_GET['code'])) {
         <input type="hidden" name="mode" value="demo">
         <input class="btn btn-sm btn-primary" type="submit" value="Autoriser">
     </form>
+
+    <?php
+    $measure = 0;
+    $dateMeasure = "";
+    echo '<div class="container m-5">';
+    if (!empty($user_data) && isset($user_data['body']['measuregrps'])) {
+        foreach ($user_data['body']['measuregrps'] as $measuregrp) {
+            $dateMeasure = date('d/m/Y à H\hi', $measuregrp['date']);
+            foreach ($measuregrp['measures'] as $measure) {
+                $measure = $measure['value'] / 1000;
+            }
+        }
+        echo '<p>Date de la dernière pesée : le ' . $dateMeasure . '</p>';
+        echo '<p>Poids : '. $measure . ' kg</p>';
+    } else {
+        echo '<p class="alert alert-info m-5">Aucune donnée Withings à afficher</p>';
+    }
+    echo '</div>';
+    ?>
 
 </main>
 </body>

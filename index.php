@@ -12,33 +12,35 @@ function get_access_token(string $code): string
     // Récupération des variables d'environnement (fichier .env)
     $env = parse_ini_file('.env');
 
-    $client_id      = $env['CLIENT_ID'];
-    $client_secret  = $env['CLIENT_SECRET'];
-    $redirect_uri   = $env['REDIRECT_URI'];
+    $client_id = $env['CLIENT_ID'];
+    $client_secret = $env['CLIENT_SECRET'];
+    $redirect_uri = $env['REDIRECT_URI'];
 
     $url = 'https://account.withings.com/oauth2/token';
 
     // Données à envoyer
     $data = [
-        'grant_type'    => 'authorization_code',
-        'client_id'     => $client_id,
+        'grant_type' => 'authorization_code',
+        'client_id' => $client_id,
         'client_secret' => $client_secret,
-        'code'          => $code,
-        'redirect_uri'  => $redirect_uri
+        'code' => $code,
+        'redirect_uri' => $redirect_uri
     ];
 
-    $options = [
-        'http' => [
-            'header' => "Content-type: application/x-www-form-urlencoded\r\n",
-            'method' => 'POST',
-            // Création de l'URL à partir des données dans $data
-            'content' => http_build_query($data),
-        ],
-    ];
 
-    // Création du contexte de la requête
-    $context = stream_context_create($options);
-    $result = file_get_contents($url, false, $context);
+    $httpBuildQuery = http_build_query($data);
+
+    $cSession = curl_init();
+    curl_setopt($cSession, CURLOPT_URL, $url);
+    curl_setopt($cSession, CURLOPT_POST, true);
+    curl_setopt($cSession, CURLOPT_POSTFIELDS, $httpBuildQuery);
+    curl_setopt($cSession, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($cSession, CURLOPT_HEADER, [
+        'Content-Type: application/x-www-form-urlencoded'
+    ]);
+
+    $result = curl_exec($cSession);
+    curl_close($cSession);
 
     if (!$result) {
         return false;
@@ -70,7 +72,8 @@ if (isset($_GET['code'])) {
 <body>
 <main class="container">
     <h1>Demande d'autorisation Withings</h1>
-    <p>Pour autoriser cette application à accéder à vos données Withings, veuillez cliquer sur le bouton ci-dessous :</p>
+    <p>Pour autoriser cette application à accéder à vos données Withings, veuillez cliquer sur le bouton ci-dessous
+        :</p>
 
     <form method="get" action="https://account.withings.com/oauth2_user/authorize2">
         <input type="hidden" name="response_type" value="code">
